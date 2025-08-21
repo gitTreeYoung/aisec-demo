@@ -1023,7 +1023,7 @@ export default function ThreatSimulation() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 py-3">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="pl-4">
           <div className="flex items-center gap-2">
             <span className="text-2xl">✨</span>
             <h1 className="text-xl font-bold text-slate-800">StarScope星图</h1>
@@ -1065,9 +1065,7 @@ export default function ThreatSimulation() {
 
             {conversation.length === 0 && (
               <div className="text-center py-8">
-                
                 <h2 className="text-lg font-semibold text-slate-700 mb-1">{""}</h2>
-                
               </div>
             )}
           </div>
@@ -1342,7 +1340,7 @@ export default function ThreatSimulation() {
                   </div>
                   <button
                     onClick={() => setShowClusterModal(true)}
-                    className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                    className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                   >
                     + 新增
                   </button>
