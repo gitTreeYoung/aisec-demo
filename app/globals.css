@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    /* Updated color tokens to match AI research platform design brief */
+    --background: 249 250 251; /* #f9fafb - soft white background */
+    --foreground: 75 85 99; /* #4b5563 - dark gray for primary text */
+    --card: 255 255 255; /* #ffffff - white cards */
+    --card-foreground: 75 85 99; /* #4b5563 - text on cards */
+    --popover: 255 255 255; /* #ffffff - white popovers */
+    --popover-foreground: 75 85 99; /* #4b5563 - text on popovers */
+    --primary: 8 145 178; /* #0891b2 - cyan-600 for technology/trust */
+    --primary-foreground: 255 255 255; /* #ffffff - white text on primary */
+    --secondary: 245 158 11; /* #f59e0b - amber-500 for highlights */
+    --secondary-foreground: 75 85 99; /* #4b5563 - text on secondary */
+    --muted: 249 250 251; /* #f9fafb - muted backgrounds */
+    --muted-foreground: 107 114 128; /* #6b7280 - muted text */
+    --accent: 245 158 11; /* #f59e0b - amber accent for important elements */
+    --accent-foreground: 255 255 255; /* #ffffff - text on accents */
+    --destructive: 220 38 38; /* #dc2626 - red for high risk/alerts */
+    --destructive-foreground: 255 255 255; /* #ffffff - text on destructive */
+    --border: 229 231 235; /* #e5e7eb - light borders */
+    --input: 255 255 255; /* #ffffff - input backgrounds */
+    --ring: 8 145 178; /* #0891b2 - focus rings */
+    --chart-1: 31 41 55; /* #1f2937 - dark gray for primary data */
+    --chart-2: 245 158 11; /* #f59e0b - amber for secondary data */
+    --chart-3: 220 38 38; /* #dc2626 - red for high risk data */
+    --chart-4: 139 92 246; /* #8b5cf6 - purple for alternative data */
+    --chart-5: 75 85 99; /* #4b5563 - neutral gray for background data */
+    --radius: 0.5rem;
+    --sidebar-background: 255 255 255; /* #ffffff - white sidebar */
+    --sidebar-foreground: 75 85 99; /* #4b5563 - sidebar text */
+    --sidebar-primary: 8 145 178; /* #0891b2 - primary sidebar highlights */
+    --sidebar-primary-foreground: 255 255 255; /* #ffffff - text on primary sidebar */
+    --sidebar-accent: 245 158 11; /* #f59e0b - accent sidebar elements */
+    --sidebar-accent-foreground: 75 85 99; /* #4b5563 - text on accent sidebar */
+    --sidebar-border: 229 231 235; /* #e5e7eb - sidebar borders */
+    --sidebar-ring: 8 145 178; /* #0891b2 - sidebar focus rings */
+  }
+  .dark {
+    --background: 17 24 39; /* #111827 - dark background */
+    --foreground: 249 250 251; /* #f9fafb - light text */
+    --card: 31 41 55; /* #1f2937 - dark cards */
+    --card-foreground: 249 250 251; /* #f9fafb - light text on cards */
+    --popover: 31 41 55; /* #1f2937 - dark popovers */
+    --popover-foreground: 249 250 251; /* #f9fafb - light text on popovers */
+    --primary: 34 197 94; /* #22c55e - green primary for dark mode */
+    --primary-foreground: 17 24 39; /* #111827 - dark text on primary */
+    --secondary: 245 158 11; /* #f59e0b - amber secondary */
+    --secondary-foreground: 17 24 39; /* #111827 - dark text on secondary */
+    --muted: 31 41 55; /* #1f2937 - muted dark backgrounds */
+    --muted-foreground: 156 163 175; /* #9ca3af - muted light text */
+    --accent: 245 158 11; /* #f59e0b - amber accent */
+    --accent-foreground: 17 24 39; /* #111827 - dark text on accents */
+    --destructive: 239 68 68; /* #ef4444 - red for dark mode */
+    --destructive-foreground: 249 250 251; /* #f9fafb - light text on destructive */
+    --border: 55 65 81; /* #374151 - dark borders */
+    --input: 31 41 55; /* #1f2937 - dark input backgrounds */
+    --ring: 34 197 94; /* #22c55e - green focus rings */
+    --chart-1: 34 197 94; /* #22c55e - green for primary data */
+    --chart-2: 245 158 11; /* #f59e0b - amber for secondary data */
+    --chart-3: 239 68 68; /* #ef4444 - red for high risk data */
+    --chart-4: 168 85 247; /* #a855f7 - purple for alternative data */
+    --chart-5: 107 114 128; /* #6b7280 - gray for background data */
+    --sidebar-background: 31 41 55; /* #1f2937 - dark sidebar */
+    --sidebar-foreground: 249 250 251; /* #f9fafb - light sidebar text */
+    --sidebar-primary: 34 197 94; /* #22c55e - green primary sidebar */
+    --sidebar-primary-foreground: 17 24 39; /* #111827 - dark text on primary sidebar */
+    --sidebar-accent: 245 158 11; /* #f59e0b - amber accent sidebar */
+    --sidebar-accent-foreground: 17 24 39; /* #111827 - dark text on accent sidebar */
+    --sidebar-border: 55 65 81; /* #374151 - dark sidebar borders */
+    --sidebar-ring: 34 197 94; /* #22c55e - green sidebar focus rings */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-600;
+  }
+}
