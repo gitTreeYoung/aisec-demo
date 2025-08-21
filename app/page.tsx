@@ -31,6 +31,9 @@ export default function ThreatSimulation() {
   const [currentConversationId, setCurrentConversationId] = useState(1)
   const [showHistoryDropdown, setShowHistoryDropdown] = useState(false)
 
+  const [focusedNeuronId, setFocusedNeuronId] = useState<string | null>(null)
+  const [showGraphModal, setShowGraphModal] = useState(false)
+
   const getClusterPresets = (modelType: "text" | "image") => {
     if (modelType === "image") {
       return new Map([
@@ -131,7 +134,6 @@ export default function ThreatSimulation() {
   const [matchedNeurons, setMatchedNeurons] = useState<any[]>([])
   const [editingCluster, setEditingCluster] = useState<string | null>(null)
 
-  const [showControlPanel, setShowControlPanel] = useState(false)
   const [showNeuronPanel, setShowNeuronPanel] = useState<string | null>(null)
   const selectionStartRef = useRef<any>(null)
 
@@ -482,7 +484,6 @@ export default function ThreatSimulation() {
     setIsSelecting(true)
     selectionStartRef.current = { messageId, tokenIndex }
     setSelectedTokens([{ messageId, tokenIndex, token }])
-    setShowControlPanel(true)
   }
 
   const handleTokenMouseEnter = (token: any, messageId: number, tokenIndex: number) => {
@@ -1017,6 +1018,277 @@ export default function ThreatSimulation() {
     setShowHistoryDropdown(false)
   }
 
+  const generatePanoramicGraphData = (activeNeurons: any[]) => {
+    // Generate clusters with different densities and colors
+    const clusters = [
+      { centerX: 60, centerY: 60, radius: 40, density: 0.8, color: "#e0f2fe", count: 35 }, // Dense blue cluster
+      { centerX: 180, centerY: 80, radius: 30, density: 0.6, color: "#f0fdf4", count: 25 }, // Medium green cluster
+      { centerX: 120, centerY: 160, radius: 35, density: 0.7, color: "#fef7cd", count: 30 }, // Dense yellow cluster
+      { centerX: 200, centerY: 180, radius: 25, density: 0.4, color: "#fce7f3", count: 20 }, // Sparse pink cluster
+      { centerX: 40, centerY: 180, radius: 20, density: 0.5, color: "#f3e8ff", count: 15 }, // Medium purple cluster
+    ]
+
+    const backgroundNodes = []
+
+    // Generate clustered nodes
+    clusters.forEach((cluster, clusterIndex) => {
+      for (let i = 0; i < cluster.count; i++) {
+        // Add some randomness to cluster positioning
+        const angle = Math.random() * 2 * Math.PI
+        const distance = Math.random() * cluster.radius * cluster.density
+        const x = cluster.centerX + Math.cos(angle) * distance + (Math.random() - 0.5) * 10
+        const y = cluster.centerY + Math.sin(angle) * distance + (Math.random() - 0.5) * 10
+
+        const clampedX = Math.max(15, Math.min(225, x))
+        const clampedY = Math.max(15, Math.min(225, y))
+
+        // Add some outliers (10% chance to use different color)
+        const useOutlierColor = Math.random() < 0.1
+        const nodeColor = useOutlierColor ? "#e2e8f0" : cluster.color
+
+        backgroundNodes.push({
+          id: `BG/N${clusterIndex * 1000 + i}`,
+          label: `N${clusterIndex * 1000 + i}`,
+          x: clampedX,
+          y: clampedY,
+          size: 1.5 + Math.random() * 1.5,
+          color: nodeColor,
+          activation: 0.05 + Math.random() * 0.1,
+          confidence: 0.3 + Math.random() * 0.2,
+          description: "背景神经元",
+          isBackground: true,
+        })
+      }
+    })
+
+    // Add some sparse random nodes in empty areas
+    for (let i = 0; i < 50; i++) {
+      backgroundNodes.push({
+        id: `BG/N${5000 + i}`,
+        label: `N${5000 + i}`,
+        x: Math.random() * 210 + 15,
+        y: Math.random() * 210 + 15,
+        size: 1 + Math.random() * 1,
+        color: "#f1f5f9",
+        activation: 0.02 + Math.random() * 0.05,
+        confidence: 0.2 + Math.random() * 0.15,
+        description: "稀疏神经元",
+        isBackground: true,
+      })
+    }
+
+    const regions = [
+      { centerX: 60, centerY: 60, radius: 30 }, // Top-left region
+      { centerX: 180, centerY: 60, radius: 25 }, // Top-right region
+      { centerX: 60, centerY: 180, radius: 25 }, // Bottom-left region
+      { centerX: 180, centerY: 180, radius: 30 }, // Bottom-right region
+      { centerX: 120, centerY: 120, radius: 20 }, // Center region
+    ]
+
+    const activeNodes = activeNeurons.map((neuron, index) => {
+      // Pick a random region for each neuron
+      const region = regions[index % regions.length]
+      const angle = Math.random() * 2 * Math.PI
+      const distance = Math.random() * region.radius
+      const x = region.centerX + Math.cos(angle) * distance + (Math.random() - 0.5) * 20
+      const y = region.centerY + Math.sin(angle) * distance + (Math.random() - 0.5) * 20
+
+      return {
+        id: neuron.id,
+        label: neuron.id,
+        x: Math.max(20, Math.min(220, x)),
+        y: Math.max(20, Math.min(220, y)),
+        size: Math.max(4, neuron.activation * 12),
+        color: `hsl(${220 + neuron.activation * 60}, 70%, ${50 + neuron.activation * 30}%)`,
+        activation: neuron.activation,
+        confidence: neuron.confidence,
+        description: neuron.description,
+        isBackground: false,
+      }
+    })
+
+    const allNodes = [...backgroundNodes, ...activeNodes]
+
+    // Generate sparse connections
+    const edges = []
+    for (let i = 0; i < allNodes.length; i++) {
+      for (let j = i + 1; j < allNodes.length; j++) {
+        if (Math.random() > 0.985) {
+          // Very sparse connections
+          edges.push({
+            source: allNodes[i].id,
+            target: allNodes[j].id,
+            strength: Math.random() * 0.2 + 0.05,
+          })
+        }
+      }
+    }
+
+    return { nodes: allNodes, edges, activeNodes }
+  }
+
+  const [selectedNeuronExplanation, setSelectedNeuronExplanation] = useState<{
+    id: string
+    explanation: string
+  } | null>(null)
+
+  const KnowledgeGraph = ({
+    neurons,
+    focusedId,
+    onNodeClick,
+    className = "",
+  }: {
+    neurons: any[]
+    focusedId: string | null
+    onNodeClick: (neuronId: string) => void
+    className?: string
+  }) => {
+    const { nodes, edges, activeNodes } = generatePanoramicGraphData(neurons)
+
+    const handleNodeClick = (nodeId: string) => {
+      onNodeClick(nodeId)
+      setSelectedNeuronExplanation({
+        id: nodeId,
+        explanation:
+          "该神经元主要负责检测输入内容中的潜在风险模式，通过多层特征提取和模式匹配来识别可能的威胁内容。激活强度反映了检测到的风险程度，置信度表示模型对该检测结果的确信程度。",
+      })
+    }
+
+    return (
+      <div className={`bg-white rounded border border-slate-200 ${className}`}>
+        <svg width="240" height="240" viewBox="0 0 240 240" className="w-full h-full">
+          {/* Edges */}
+          {edges.map((edge, index) => {
+            const sourceNode = nodes.find((n) => n.id === edge.source)
+            const targetNode = nodes.find((n) => n.id === edge.target)
+            if (!sourceNode || !targetNode) return null
+
+            return (
+              <line
+                key={index}
+                x1={sourceNode.x}
+                y1={sourceNode.y}
+                x2={targetNode.x}
+                y2={targetNode.y}
+                stroke="#f8fafc"
+                strokeWidth={edge.strength}
+                opacity={0.4}
+              />
+            )
+          })}
+
+          {/* Nodes */}
+          {nodes.map((node) => (
+            <g key={node.id}>
+              <circle
+                cx={node.x}
+                cy={node.y}
+                r={node.size}
+                fill={node.color}
+                stroke={focusedId === node.id ? "#3b82f6" : node.isBackground ? "none" : "#ffffff"}
+                strokeWidth={focusedId === node.id ? 2 : node.isBackground ? 0 : 1}
+                className={`${node.isBackground ? "opacity-70" : "cursor-pointer hover:stroke-blue-500 hover:stroke-2"} transition-all`}
+                onClick={() => !node.isBackground && handleNodeClick(node.id)}
+              />
+              {!node.isBackground && (focusedId === node.id || !focusedId) && (
+                <text
+                  x={node.x}
+                  y={node.y + node.size + 6}
+                  textAnchor="middle"
+                  className="text-xs fill-slate-600 pointer-events-none"
+                  fontSize="0.5"
+                >
+                  {node.label.split("/")[1] || node.label}
+                </text>
+              )}
+            </g>
+          ))}
+        </svg>
+      </div>
+    )
+  }
+
+  const FullScreenGraphModal = ({
+    isOpen,
+    onClose,
+    neurons,
+    focusedId,
+    onNodeClick,
+  }: {
+    isOpen: boolean
+    onClose: () => void
+    neurons: any[]
+    focusedId: string | null
+    onNodeClick: (neuronId: string) => void
+  }) => {
+    if (!isOpen) return null
+
+    const { nodes, edges } = generatePanoramicGraphData(neurons)
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg w-[90vw] h-[90vh] flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h3 className="text-lg font-semibold">神经元知识图谱</h3>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex-1 p-4">
+            <svg width="100%" height="100%" viewBox="0 0 800 600" className="w-full h-full">
+              {/* Edges */}
+              {edges.map((edge, index) => {
+                const sourceNode = nodes.find((n) => n.id === edge.source)
+                const targetNode = nodes.find((n) => n.id === edge.target)
+                if (!sourceNode || !targetNode) return null
+
+                return (
+                  <line
+                    key={index}
+                    x1={sourceNode.x * 3.33}
+                    y1={sourceNode.y * 2.5}
+                    x2={targetNode.x * 3.33}
+                    y2={targetNode.y * 2.5}
+                    stroke="#e2e8f0"
+                    strokeWidth={edge.strength * 3}
+                    opacity={0.6}
+                  />
+                )
+              })}
+
+              {/* Nodes */}
+              {nodes.map((node) => (
+                <g key={node.id}>
+                  <circle
+                    cx={node.x * 3.33}
+                    cy={node.y * 2.5}
+                    r={node.size * 2}
+                    fill={node.color}
+                    stroke={focusedId === node.id ? "#3b82f6" : "#ffffff"}
+                    strokeWidth={focusedId === node.id ? 4 : 2}
+                    className="cursor-pointer hover:stroke-blue-500 hover:stroke-3 transition-all"
+                    onClick={() => onNodeClick(node.id)}
+                  />
+                  <text
+                    x={node.x * 3.33}
+                    y={node.y * 2.5 + node.size * 2 + 20}
+                    textAnchor="middle"
+                    className="text-sm fill-slate-600 pointer-events-none"
+                    fontSize="12"
+                  >
+                    {node.label}
+                  </text>
+                </g>
+              ))}
+            </svg>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Additional code can be added here if needed
 
   return (
@@ -1283,15 +1555,17 @@ export default function ThreatSimulation() {
                 </div>
               </div>
 
-              {/* Neuron activation status */}
-              <div className="bg-slate-50 rounded-lg p-2 flex-[7] flex flex-col min-h-0">
+              <div className="bg-slate-50 rounded-lg p-2 flex-[5] flex flex-col min-h-0">
                 <div className="text-xs font-medium text-slate-700 mb-2 flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center">
                     <Activity className="w-3 h-3 mr-1" />
                     神经元激活状态
                   </div>
                   {selectedTokens.length > 0 && (
-                    <button className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
+                    <button
+                      onClick={() => setShowGraphModal(true)}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                    >
                       在全景图中查看
                     </button>
                   )}
@@ -1299,7 +1573,13 @@ export default function ThreatSimulation() {
                 <div className="flex-1 overflow-y-auto space-y-2">
                   {selectedTokens.length > 0 ? (
                     generateNeuronDataForKeywords(selectedTokens).map((neuron, index) => (
-                      <div key={index} className="bg-white rounded border border-slate-200 p-2">
+                      <div
+                        key={index}
+                        className={`bg-white rounded border border-slate-200 p-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all ${
+                          focusedNeuronId === neuron.id ? "ring-2 ring-blue-500 bg-blue-50" : ""
+                        }`}
+                        onClick={() => setFocusedNeuronId(neuron.id)}
+                      >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-xs font-mono text-slate-600">{neuron.id}</span>
                           <div className="flex items-center gap-2">
@@ -1326,6 +1606,57 @@ export default function ThreatSimulation() {
                         <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-xs">在左侧对话界面中选择关键词后，可查看神经元激活状态</p>
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-lg p-2 flex-[4] flex flex-col min-h-0">
+                <div className="text-xs font-medium text-slate-700 mb-2 flex items-center justify-between flex-shrink-0">
+                  <div className="flex items-center">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 11H5m14-7l2 2-2 2m2-2H9m10 7l2 2-2 2m2-2H9"
+                      />
+                    </svg>
+                    神经元全景图
+                  </div>
+                  {selectedTokens.length > 0 && (
+                    <button
+                      onClick={() => setShowGraphModal(true)}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                    >
+                      大屏查看
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                  {selectedTokens.length > 0 ? (
+                    <KnowledgeGraph
+                      neurons={generateNeuronDataForKeywords(selectedTokens)}
+                      focusedId={focusedNeuronId}
+                      onNodeClick={setFocusedNeuronId}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <div className="text-center text-slate-400">
+                      <svg
+                        className="w-8 h-8 mx-auto mb-2 opacity-50"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 11H5m14-7l2 2-2 2m2-2H9m10 7l2 2-2 2m2-2H9"
+                        />
+                      </svg>
+                      <p className="text-xs">选择关键词后查看神经元全景图</p>
                     </div>
                   )}
                 </div>
@@ -1446,6 +1777,35 @@ export default function ThreatSimulation() {
           </div>
         </div>
       </div>
+
+      <FullScreenGraphModal
+        isOpen={showGraphModal}
+        onClose={() => setShowGraphModal(false)}
+        neurons={generateNeuronDataForKeywords(selectedTokens)}
+        focusedId={focusedNeuronId}
+        onNodeClick={(neuronId) => {
+          setFocusedNeuronId(neuronId === focusedNeuronId ? null : neuronId)
+        }}
+      />
+
+      {selectedNeuronExplanation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">神经元详情</h3>
+              <button onClick={() => setSelectedNeuronExplanation(null)} className="text-gray-500 hover:text-gray-700">
+                ✕
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <span className="font-medium text-blue-600">{selectedNeuronExplanation.id}</span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">{selectedNeuronExplanation.explanation}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cluster creation modal */}
       {showClusterModal && (
