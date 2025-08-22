@@ -449,7 +449,7 @@ export default function ThreatSimulation() {
       },
     ]
 
-    return baseNeurons
+    return baseNeurons.sort((a, b) => b.confidence - a.confidence)
   }
 
   // Neuron control functions
@@ -530,6 +530,41 @@ export default function ThreatSimulation() {
     return selectedTokens.some((selected) => selected.messageId === messageId && selected.tokenIndex === tokenIndex)
   }
 
+  const getKeywordHighlight = (text: string) => {
+    const redKeywords = ["钓鱼邮件", "资金安全", "恶意链接", "窃取", "诈骗", "欺诈", "盗取", "恶意", "危险"]
+    const orangeKeywords = ["verify", "login", "验证", "登录", "点击", "链接"]
+    const greenKeywords = ["异常活动", "账户", "可疑", "检测", "保护", "安全"]
+
+    for (const keyword of redKeywords) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        return {
+          type: "red",
+          className: "bg-[#fef2f2] text-[#dc2626] px-1 rounded",
+        }
+      }
+    }
+
+    for (const keyword of orangeKeywords) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        return {
+          type: "orange",
+          className: "bg-[#fff7ed] text-[#ea580c] px-1 rounded",
+        }
+      }
+    }
+
+    for (const keyword of greenKeywords) {
+      if (text.toLowerCase().includes(keyword.toLowerCase())) {
+        return {
+          type: "green",
+          className: "bg-[#f0fdf4] text-[#16a34a] px-1 rounded",
+        }
+      }
+    }
+
+    return null
+  }
+
   const renderTokenizedText = (text: string, messageId: number, isUserMessage: boolean, messageRiskLevel: string) => {
     const tokens = tokenizeText(text, messageRiskLevel)
 
@@ -543,15 +578,29 @@ export default function ThreatSimulation() {
           }
 
           const isSelected = isTokenSelected(messageId, index)
-          const tokenClass = `inline cursor-pointer transition-all duration-150 ${
-            isSelected
-              ? "bg-blue-200 text-blue-900 border-b-2 border-blue-500"
-              : token.riskLevel === "high"
+          const keywordHighlight = getKeywordHighlight(token.text)
+
+          let tokenClass = "inline cursor-pointer transition-all duration-150 "
+
+          if (isSelected && keywordHighlight) {
+            // When selected, use a stronger blue background with the keyword text color
+            tokenClass += `bg-blue-100 ${keywordHighlight.className.split(" ").find((c) => c.startsWith("text-"))} border-2 border-blue-500 px-1 rounded shadow-md`
+          } else if (isSelected) {
+            tokenClass += "bg-blue-200 text-blue-900 border-b-2 border-blue-500"
+          } else if (keywordHighlight) {
+            tokenClass += keywordHighlight.className
+          } else {
+            tokenClass +=
+              token.riskLevel === "high"
                 ? "text-red-800 hover:bg-red-50"
                 : token.riskLevel === "medium"
                   ? "text-yellow-800 hover:bg-yellow-50"
                   : "hover:bg-slate-50"
-          } ${!canSelect ? "cursor-default" : ""}`
+          }
+
+          if (!canSelect) {
+            tokenClass += " cursor-default"
+          }
 
           return (
             <span
@@ -559,7 +608,9 @@ export default function ThreatSimulation() {
               className={tokenClass}
               onMouseDown={canSelect ? (e) => handleTokenMouseDown(token, messageId, index) : undefined}
               onMouseEnter={canSelect ? (e) => handleTokenMouseEnter(token, messageId, index) : undefined}
-              style={{ userSelect: "none" }}
+              style={{
+                userSelect: isSelected ? "text" : "none",
+              }}
             >
               {token.text}
             </span>
@@ -1541,10 +1592,10 @@ export default function ThreatSimulation() {
           )}
 
           {/* Input area */}
-          <div className="border-t border-slate-200 bg-white p-3">
+          <div className="border-t border-slate-200 bg-white p-4">
             <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
                   <select
                     value={selectedModel}
                     onChange={(e) => setSelectedModel(e.target.value as "text" | "image")}
@@ -1556,25 +1607,26 @@ export default function ThreatSimulation() {
                   </select>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   <button
                     onClick={handleNewConversation}
-                    className="px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium flex items-center space-x-1"
+                    className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                     disabled={isLoading}
+                    title="新建对话"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>新建对话</span>
                   </button>
 
                   <div className="relative">
                     <button
                       onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
-                      className="px-3 py-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors text-sm font-medium flex items-center space-x-1"
+                      className="p-2 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
                       disabled={isLoading}
+                      title="历史对话"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -1582,19 +1634,10 @@ export default function ThreatSimulation() {
                           d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                       </svg>
-                      <span>历史对话</span>
-                      <svg
-                        className={`w-4 h-4 transition-transform ${showHistoryDropdown ? "rotate-180" : ""}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
                     </button>
 
                     {showHistoryDropdown && (
-                      <div className="absolute right-0 bottom-full mb-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                      <div className="absolute right-0 bottom-full mb-2 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
                         {conversations.map((conv) => (
                           <button
                             key={conv.id}
@@ -1672,219 +1715,100 @@ export default function ThreatSimulation() {
                     神经元激活状态
                   </div>
                   {selectedTokens.length > 0 && (
-                    <button
-                      onClick={() => setShowGraphModal(true)}
-                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                    >
-                      在全景图中查看
-                    </button>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setNeuronData(generateNeuronDataForKeywords(selectedTokens))}
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                      >
+                        刷新
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className="flex-1 overflow-y-auto space-y-2">
-                  {selectedTokens.length > 0 ? (
-                    generateNeuronDataForKeywords(selectedTokens).map((neuron, index) => (
-                      <div
-                        key={index}
-                        className={`bg-white rounded border border-slate-200 p-2 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all ${
-                          focusedNeuronId === neuron.id ? "ring-2 ring-blue-500 bg-blue-50" : ""
-                        }`}
-                        onClick={() => setFocusedNeuronId(neuron.id)}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-mono text-slate-600">{neuron.id}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-slate-700">
-                              {Math.round(neuron.activation * 100)}%
+                  {neuronData.length > 0 ? (
+                    neuronData.map((neuron, index) => (
+                      <div key={index} className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm font-medium text-slate-800">{neuron.id}</div>
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRiskColor(
+                                "low",
+                              )}`}
+                            >
+                              {getRiskIcon("low")}
+                              {getRiskText("low")}
                             </span>
-                            <span className="text-xs font-medium text-blue-600">
-                              置信分: {Math.round(neuron.confidence * 100)}%
-                            </span>
+                            <button
+                              onClick={() => toggleControlPanel(neuron.id)}
+                              className="text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors p-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                />
+                              </svg>
+                            </button>
                           </div>
                         </div>
-                        <div className="w-full bg-slate-200 rounded-full h-1.5 mb-2">
-                          <div
-                            className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: `${neuron.activation * 100}%` }}
-                          ></div>
-                        </div>
-                        <p className="text-xs text-slate-600 leading-relaxed break-words">{neuron.description}</p>
+                        <p className="text-xs text-slate-500 leading-relaxed">{neuron.description}</p>
+
+                        {showNeuronPanel === neuron.id && (
+                          <div className="mt-3">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-xs font-medium text-slate-700">激活强度</div>
+                              <div className="text-xs text-slate-500">
+                                {getNeuronControlValue(neuron.id).toFixed(2)}
+                              </div>
+                            </div>
+                            <input
+                              type="range"
+                              min="0"
+                              max="2"
+                              step="0.05"
+                              value={getNeuronControlValue(neuron.id)}
+                              onChange={(e) => updateNeuronControl(neuron.id, Number.parseFloat(e.target.value))}
+                              className="w-full h-1 bg-blue-100 rounded-full appearance-none cursor-pointer"
+                            />
+                            <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
+                              <div>最小值: 0</div>
+                              <div>最大值: 2</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))
                   ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center text-slate-400">
-                        <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">在左侧对话界面中选择关键词后，可查看神经元激活状态</p>
-                      </div>
-                    </div>
+                    <div className="text-xs text-slate-400 py-2">请在左侧选择关键词，以查看相关的神经元激活状态</div>
                   )}
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-lg p-2 flex-shrink-0" style={{ height: "280px" }}>
-                <div className="text-xs font-medium text-slate-700 mb-2 flex items-center justify-between flex-shrink-0">
-                  <div className="flex items-center">
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 11H5m14-7l2 2-2 2m2-2H9m10 7l2 2-2 2m2-2H9"
-                      />
-                    </svg>
-                    神经元全景图
-                  </div>
-                  {selectedTokens.length > 0 && (
-                    <button
-                      onClick={() => setShowGraphModal(true)}
-                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                    >
-                      大屏查看
-                    </button>
-                  )}
-                </div>
-                <div
-                  className="flex items-center justify-center overflow-hidden"
-                  style={{ height: "calc(100% - 32px)" }}
-                >
-                  {selectedTokens.length > 0 ? (
-                    <KnowledgeGraph
-                      neurons={generateNeuronDataForKeywords(selectedTokens)}
-                      focusedId={focusedNeuronId}
-                      onNodeClick={setFocusedNeuronId}
-                      className="w-full h-full max-h-full"
-                    />
-                  ) : (
-                    <div className="text-center text-slate-400">
-                      <svg
-                        className="w-8 h-8 mx-auto mb-2 opacity-50"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 11H5m14-7l2 2-2 2m2-2H9m10 7l2 2-2 2m2-2H9"
-                        />
-                      </svg>
-                      <p className="text-xs">选择关键词后查看神经元全景图</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Cluster control panel */}
               <div className="bg-slate-50 rounded-lg p-2 flex-[2] flex flex-col min-h-0">
                 <div className="text-xs font-medium text-slate-700 mb-2 flex items-center justify-between flex-shrink-0">
                   <div className="flex items-center">
-                    <Brain className="w-3 h-3 mr-1" />
-                    Cluster 控制面板
+                    <Activity className="w-3 h-3 mr-1" />
+                    神经元全景图
                   </div>
-                  <button
-                    onClick={() => setShowClusterModal(true)}
-                    className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
-                  >
-                    + 新增
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowGraphModal(true)}
+                      className="text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 px-2 py-1 rounded transition-colors"
+                    >
+                      全屏查看
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1 overflow-y-auto space-y-2">
-                  {Array.from(clusterControls.entries()).length > 0 ? (
-                    Array.from(clusterControls.entries()).map(([clusterId, cluster]) => (
-                      <div key={clusterId} className={`bg-white rounded p-2 ${!cluster.enabled ? "opacity-50" : ""}`}>
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => toggleClusterEnabled(clusterId)}
-                              className={`w-8 h-4 rounded-full transition-colors relative ${
-                                cluster.enabled ? "bg-green-500" : "bg-slate-300"
-                              }`}
-                            >
-                              <div
-                                className={`w-3 h-3 bg-white rounded-full absolute top-0.5 transition-transform ${
-                                  cluster.enabled ? "translate-x-4" : "translate-x-0.5"
-                                }`}
-                              ></div>
-                            </button>
-                            <span className="text-xs font-medium text-slate-700">{cluster.name}</span>
-                            <span
-                              className={`text-xs px-1 py-0.5 rounded ${
-                                cluster.type === "preset"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-purple-100 text-purple-700"
-                              }`}
-                            >
-                              {cluster.type === "preset" ? "预设" : "自定义"}
-                            </span>
-                            <span className="text-xs text-slate-500">{cluster.description}</span>
-                          </div>
-                          <button
-                            onClick={() => handleEditCluster(clusterId)}
-                            className="text-slate-400 hover:text-slate-600"
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0
-                                112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                        <div className="text-xs text-slate-600 mb-1">
-                          强度: {Math.round(cluster.value * 100)}%
-                          <span
-                            className={`ml-2 px-1 py-0.5 rounded ${
-                              cluster.value > 1 ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
-                            }`}
-                          >
-                            {cluster.value > 1 ? "增强" : "抑制"}
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <input
-                            type="range"
-                            min="0"
-                            max="2"
-                            step="0.1"
-                            value={cluster.value}
-                            onChange={(e) => {
-                              const newValue = Number.parseFloat(e.target.value)
-                              setClusterControls((prevClusters) => {
-                                const newMap = new Map(prevClusters)
-                                const updatedCluster = { ...cluster, value: newValue }
-                                if (cluster.id && cluster.id.startsWith("preset-")) {
-                                  newMap.set(cluster.id, updatedCluster)
-                                } else {
-                                  const clusterId = Array.from(prevClusters.keys()).find(
-                                    (key) => prevClusters.get(key) === cluster,
-                                  )
-                                  if (clusterId) {
-                                    newMap.set(clusterId, { ...updatedCluster, value: newValue })
-                                  }
-                                }
-                                return newMap
-                              })
-                            }}
-                            className="w-full h-2 bg-gradient-to-r from-blue-200 via-green-200 to-red-200 rounded-lg appearance-none cursor-pointer"
-                            disabled={!cluster.enabled}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center text-slate-400">
-                        <Brain className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-xs">可以控制神经元的激活情况</p>
-                        <p className="text-xs mt-1">点击"+ 新增"创建控制项</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <KnowledgeGraph
+                  neurons={neuronData}
+                  focusedId={focusedNeuronId}
+                  onNodeClick={setFocusedNeuronId}
+                  className="flex-1"
+                />
               </div>
             </div>
           </div>
@@ -1894,109 +1818,10 @@ export default function ThreatSimulation() {
       <FullScreenGraphModal
         isOpen={showGraphModal}
         onClose={() => setShowGraphModal(false)}
-        neurons={generateNeuronDataForKeywords(selectedTokens)}
+        neurons={neuronData}
         focusedId={focusedNeuronId}
-        onNodeClick={(neuronId) => {
-          setFocusedNeuronId(neuronId === focusedNeuronId ? null : neuronId)
-        }}
+        onNodeClick={setFocusedNeuronId}
       />
-
-      {/* {selectedNeuronExplanation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">神经元详情</h3>
-              <button onClick={() => setSelectedNeuronExplanation(null)} className="text-gray-500 hover:text-gray-700">
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <span className="font-medium text-blue-600">{selectedNeuronExplanation.id}</span>
-              </div>
-              <p className="text-sm text-gray-700 leading-relaxed">{selectedNeuronExplanation.explanation}</p>
-            </div>
-          </div>
-        </div>
-      )} */}
-
-      {/* Cluster creation modal */}
-      {showClusterModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">{editingCluster ? "编辑 Cluster" : "新增 Cluster"}</h3>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">神经元名称</label>
-                <input
-                  type="text"
-                  value={newClusterName}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  placeholder="会通过相似匹配所有相关的神经元"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">匹配神经元数量</label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newClusterCount}
-                  onChange={(e) => handleCountChange(Number.parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">控制强度</label>
-                <input
-                  type="range"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  value={newClusterValue}
-                  onChange={(e) => setNewClusterValue(Number.parseFloat(e.target.value))}
-                  className="w-full"
-                />
-                <div className="text-sm text-gray-600 mt-1">当前值: {Math.round(newClusterValue * 100)}%</div>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-700 mb-2">匹配的神经元 ({matchedNeurons.length})</h4>
-                <div className="border border-gray-200 rounded-md p-3 max-h-64 overflow-y-auto">
-                  {matchedNeurons.map((neuron, index) => (
-                    <div key={index} className="py-2 border-b border-gray-100 last:border-b-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-mono text-blue-600 font-medium">{neuron.id}</span>
-                        <span className="text-sm text-gray-600">匹配度: {neuron.score.toFixed(4)}</span>
-                      </div>
-                      {neuron.explanation && (
-                        <p className="text-xs text-gray-700 leading-relaxed break-words mt-1">{neuron.explanation}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowClusterModal(false)
-                  setEditingCluster(null)
-                  setNewClusterName("")
-                  setNewClusterCount(5)
-                  setNewClusterValue(1.0)
-                  setMatchedNeurons([])
-                }}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleCreateCluster}
-                disabled={!newClusterName.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              >
-                {editingCluster ? "保存" : "创建"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
